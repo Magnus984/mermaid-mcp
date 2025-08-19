@@ -11,7 +11,7 @@
     "start": "npx @modelcontextprotocol/inspector node build/index.js",
     "prepare": "husky && npm run build",
     "prepublishOnly": "npm run build",
-    "postinstall": "playwright install --with-deps chromium"
+    "postinstall": "playwright install chromium"
   },
   "bin": {
     "mcp-mermaid": "./build/index.js"
