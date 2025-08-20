@@ -9,6 +9,7 @@ import {
   startHTTPStreamableServer,
   startSSEMcpServer,
   startStdioMcpServer,
+  startUnifiedMcpServer
 } from "./services";
 import { schema, tool } from "./tools";
 import { renderMermaid } from "./utils";
@@ -143,4 +144,19 @@ export async function runHTTPStreamableServer(
   port = 3033,
 ): Promise<void> {
   await startHTTPStreamableServer(createServer, endpoint, port);
+}
+
+/**
+ * Runs a unified server that supports both SSE and HTTP streamable transports.
+ */
+export async function runUnifiedServer(
+  port = 3033,
+  sseEndpoint = "/sse",
+  streamableEndpoint = "/mcp",
+): Promise<void> {
+  await startUnifiedMcpServer(createServer, {
+    port,
+    sseEndpoint,
+    streamableEndpoint,
+  });
 }
