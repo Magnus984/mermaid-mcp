@@ -16,6 +16,7 @@ import { renderMermaid } from "./utils";
 import { createServerCleanup } from "./utils/cleanupHelpers";
 import { Logger } from "./utils/logger";
 import { shutdownManager } from "./utils/shutdownManager";
+import { FileStorageService } from "./services";
 
 /**
  * Creates and configures an MCP server for mermaid generation.
@@ -64,7 +65,10 @@ function setupToolHandlers(server: Server): void {
           );
         }
 
+        // Destructs values from args
         const { mermaid, theme, backgroundColor, outputType = "png" } = args;
+
+        // Rendering the mermaid diagram
         const { id, svg, screenshot } = await renderMermaid(
           mermaid as string,
           theme as string,
@@ -91,12 +95,49 @@ function setupToolHandlers(server: Server): void {
             ],
           };
         }
+
+        if (!screenshot) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            "Failed to generate screenshot from mermaid diagram"
+          );
+        }
+
+        // Instantiate file storage service
+        const fileStorage = new FileStorageService();
+
+        // Generate descriptive filename
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `mermaid-${theme}-${timestamp}.png`;
+        Logger.info(`Filename is ${filename}`);
+        
+        try {
+          const fileResult = await fileStorage.storeFile(
+            screenshot, // This is the Buffer from renderMermaid
+            filename,
+            'image/png'
+          );
+          
+          Logger.info(`Mermaid image stored successfully: ${fileResult.url}`); 
+  
+          return {
+            content: [
+              {
+                type: "text",
+                text: fileResult.url
+              },
+            ],
+          };
+        } catch (fileStorageError) {
+          Logger.error("File storage failed, falling back to base64", fileStorageError);
+        }
+        
         return {
           content: [
             {
               type: "image",
-              data: screenshot?.toString("base64"),
-              mimeType: "image/png",
+              data: screenshot.toString("base64"),
+              mimeType: "image/png"
             },
           ],
         };

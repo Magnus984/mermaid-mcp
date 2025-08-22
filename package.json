@@ -19,10 +19,19 @@
   "bin": {
     "mcp-mermaid": "./build/index.js"
   },
-  "files": ["build"],
-  "keywords": ["mcp", "mermaid", "data-visualization", "chart", "diagram"],
+  "files": [
+    "build"
+  ],
+  "keywords": [
+    "mcp",
+    "mermaid",
+    "data-visualization",
+    "chart",
+    "diagram"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.11.4",
+    "dotenv": "^17.2.1",
     "mermaid-isomorphic": "^3.0.4",
     "playwright": "^1.52.0",
     "zod": "^3.25.16",
