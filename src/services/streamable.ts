@@ -15,7 +15,7 @@ import {
 import { Logger } from "../utils/logger";
 
 export const startHTTPStreamableServer = async (
-  createServer: () => Server,
+  createServer: (apiKey?: string) => Server,
   endpoint = "/mcp",
   port = 1122,
   eventStore: EventStore = new InMemoryEventStore(),
@@ -41,7 +41,8 @@ export const startHTTPStreamableServer = async (
     const reqUrl = new URL(req.url, "http://localhost");
 
     // Handle POST requests to endpoint
-    if (req.method === "POST" && reqUrl.pathname === endpoint) {
+    // Check for authorization header in the request headers
+    if (req.method === "POST" && reqUrl.pathname === endpoint && req.headers.authorization) {
       try {
         const sessionId = Array.isArray(req.headers["mcp-session-id"])
           ? req.headers["mcp-session-id"][0]
@@ -92,14 +93,14 @@ export const startHTTPStreamableServer = async (
           };
 
           // Create the server
-          try {
-            server = createServer();
-          } catch (error) {
-            if (error instanceof Response) {
-              res.writeHead(error.status).end(error.statusText);
-              return;
-            }
-            res.writeHead(500).end("Error creating server");
+          const authHeader = req.headers["authorization"];
+          if (authHeader && typeof authHeader === 'string') {
+            const token = authHeader.replace('Bearer ', '');
+            
+            server = createServer(token);
+          } else {
+            Logger.error("Missing authorization header");
+            res.writeHead(401).end("Unauthorized: Missing authorization header");
             return;
           }
 
@@ -164,7 +165,7 @@ export const startHTTPStreamableServer = async (
       if (lastEventId) {
         console.log(`Client reconnecting with Last-Event-ID: ${lastEventId}`);
       } else {
-        console.log(`Establishing new SSE stream for session ${sessionId}`);
+        console.log(`Establishing new streamable connection for session ${sessionId}`);
       }
 
       await activeTransport.transport.handleRequest(req, res);

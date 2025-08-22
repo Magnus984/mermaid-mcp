@@ -11,9 +11,11 @@ export interface FileResponse {
 
 export class FileStorageService {
   private config: typeof fileStorageConfig;
+  private apiKey: string;
 
-  constructor(config = fileStorageConfig) {
+  constructor(apiKey: string, config = fileStorageConfig) {
     this.config = config;
+    this.apiKey = apiKey;
   }
 
   async storeFile(
@@ -38,7 +40,7 @@ export class FileStorageService {
       const response = await fetch(`${this.config.baseUrl}/api/v1/files`, { // Match Python endpoint
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.config.apiKey}`,
+          'Authorization': `Bearer ${this.apiKey}`,
           // Don't set Content-Type - FormData sets it automatically
         },
         body: formData,

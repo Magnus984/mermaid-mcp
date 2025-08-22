@@ -21,7 +21,7 @@ import { FileStorageService } from "./services";
 /**
  * Creates and configures an MCP server for mermaid generation.
  */
-export function createServer(): Server {
+export function createServer(apiKey?: string): Server {
   const server = new Server(
     {
       name: "mcp-mermaid",
@@ -34,7 +34,7 @@ export function createServer(): Server {
     },
   );
 
-  setupToolHandlers(server);
+  setupToolHandlers(server, apiKey);
 
   server.onerror = (error) => Logger.error("MCP Error", error);
 
@@ -47,7 +47,7 @@ export function createServer(): Server {
 /**
  * Sets up tool handlers for the MCP server.
  */
-function setupToolHandlers(server: Server): void {
+function setupToolHandlers(server: Server, apiKey?: string): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [tool],
   }));
@@ -104,7 +104,7 @@ function setupToolHandlers(server: Server): void {
         }
 
         // Instantiate file storage service
-        const fileStorage = new FileStorageService();
+        const fileStorage = new FileStorageService(apiKey || '');
 
         // Generate descriptive filename
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
