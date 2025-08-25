@@ -34,6 +34,7 @@
     "dotenv": "^17.2.1",
     "mermaid-isomorphic": "^3.0.4",
     "playwright": "^1.52.0",
+    "serve-handler": "^6.1.6",
     "zod": "^3.25.16",
     "zod-to-json-schema": "^3.24.5"
   },

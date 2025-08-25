@@ -49,10 +49,17 @@ export function createServer(apiKey?: string): Server {
  */
 function setupToolHandlers(server: Server, apiKey?: string): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    // Enforce auth for listing tools
+    // If no apiKey provided, reject
+    ...(apiKey ? {} : (() => { throw new McpError(ErrorCode.InvalidRequest, "Missing or invalid API token"); })()),
     tools: [tool],
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    // Enforce auth for calling tools
+    if (!apiKey) {
+      throw new McpError(ErrorCode.InvalidRequest, "Missing or invalid API token");
+    }
     if (request.params.name === tool.name) {
       try {
         const args = request.params.arguments || {};
@@ -99,45 +106,31 @@ function setupToolHandlers(server: Server, apiKey?: string): void {
         if (!screenshot) {
           throw new McpError(
             ErrorCode.InternalError,
-            "Failed to generate screenshot from mermaid diagram"
+            "Failed to generate screenshot from mermaid diagram",
           );
         }
 
         // Instantiate file storage service
-        const fileStorage = new FileStorageService(apiKey || '');
+        const fileStorage = new FileStorageService(apiKey || "");
 
         // Generate descriptive filename
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const filename = `mermaid-${theme}-${timestamp}.png`;
         Logger.info(`Filename is ${filename}`);
-        
-        try {
-          const fileResult = await fileStorage.storeFile(
-            screenshot, // This is the Buffer from renderMermaid
-            filename,
-            'image/png'
-          );
-          
-          Logger.info(`Mermaid image stored successfully: ${fileResult.url}`); 
-  
-          return {
-            content: [
-              {
-                type: "text",
-                text: fileResult.url
-              },
-            ],
-          };
-        } catch (fileStorageError) {
-          Logger.error("File storage failed, falling back to base64", fileStorageError);
-        }
-        
+
+        const fileResult = await fileStorage.storeFile(
+          screenshot, // This is the Buffer from renderMermaid
+          filename,
+          'image/png'
+        );
+
+        Logger.info(`Mermaid image stored successfully: ${fileResult.url}`);
+
         return {
           content: [
             {
-              type: "image",
-              data: screenshot.toString("base64"),
-              mimeType: "image/png"
+              type: "text",
+              text: fileResult.url,
             },
           ],
         };

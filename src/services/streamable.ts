@@ -42,7 +42,7 @@ export const startHTTPStreamableServer = async (
 
     // Handle POST requests to endpoint
     // Check for authorization header in the request headers
-    if (req.method === "POST" && reqUrl.pathname === endpoint && req.headers.authorization) {
+    if (req.method === "POST" && reqUrl.pathname === endpoint) {
       try {
         const sessionId = Array.isArray(req.headers["mcp-session-id"])
           ? req.headers["mcp-session-id"][0]
@@ -94,15 +94,12 @@ export const startHTTPStreamableServer = async (
 
           // Create the server
           const authHeader = req.headers["authorization"];
-          if (authHeader && typeof authHeader === 'string') {
-            const token = authHeader.replace('Bearer ', '');
-            
-            server = createServer(token);
-          } else {
-            Logger.error("Missing authorization header");
-            res.writeHead(401).end("Unauthorized: Missing authorization header");
-            return;
-          }
+          const token =
+            authHeader && typeof authHeader === "string" && authHeader.startsWith("Bearer ")
+              ? authHeader.slice(7)
+              : undefined;
+
+          server = createServer(token);
 
           server.connect(transport);
 
