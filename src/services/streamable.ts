@@ -37,9 +37,7 @@ export const startHTTPStreamableServer = async (
       res.writeHead(400).end("No URL");
       return;
     }
-    Logger.info(
-      `[Streamable] ${req.method} ${req.url} headers: ${JSON.stringify(req.headers)}`
-    );
+
     const reqUrl = new URL(req.url, "http://localhost");
 
     // Handle POST requests to endpoint
