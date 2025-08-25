@@ -49,9 +49,6 @@ export function createServer(apiKey?: string): Server {
  */
 function setupToolHandlers(server: Server, apiKey?: string): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    // Enforce auth for listing tools
-    // If no apiKey provided, reject
-    ...(apiKey ? {} : (() => { throw new McpError(ErrorCode.InvalidRequest, "Missing or invalid API token"); })()),
     tools: [tool],
   }));
 
