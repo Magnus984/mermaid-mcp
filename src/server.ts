@@ -89,16 +89,16 @@ function setupToolHandlers(server: Server, apiKey?: string): void {
             ],
           };
         }
-        if (outputType === "svg") {
-          return {
-            content: [
-              {
-                type: "text",
-                text: svg,
-              },
-            ],
-          };
-        }
+        // if (outputType === "svg") {
+        //   return {
+        //     content: [
+        //       {
+        //         type: "text",
+        //         text: svg,
+        //       },
+        //     ],
+        //   };
+        // }
 
         if (!screenshot) {
           throw new McpError(
