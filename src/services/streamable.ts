@@ -13,6 +13,8 @@ import {
   getBody,
 } from "../utils";
 import { Logger } from "../utils/logger";
+import { renderMermaid } from "../utils";
+import { FileStorageService } from "./fileStorage";
 
 export const startHTTPStreamableServer = async (
   createServer: (apiKey?: string) => Server,
@@ -37,11 +39,107 @@ export const startHTTPStreamableServer = async (
       res.writeHead(400).end("No URL");
       return;
     }
-
     const reqUrl = new URL(req.url, "http://localhost");
 
-    // Handle POST requests to endpoint
-    // Check for authorization header in the request headers
+    // Non-MCP REST endpoint: POST /render
+    if (req.method === "POST" && reqUrl.pathname === "/render") {
+      try {
+        // Auth: require Authorization Key
+        const authHeader = req.headers["authorization"];
+        const token =
+          authHeader && typeof authHeader === "string" && authHeader.startsWith("Bearer ")
+            ? authHeader.slice(7)
+            : undefined;
+        if (!token) {
+          res.setHeader("Content-Type", "application/json");
+          res.writeHead(401).end(
+            JSON.stringify({ error: { message: "Unauthorized: Missing Authorization Key" } }),
+          );
+          return;
+        }
+
+        // Parse JSON body
+        const raw = await getBody(req);
+        let body: unknown;
+        try {
+          body = typeof raw === "string" ? JSON.parse(raw) : raw;
+        } catch {
+          res.setHeader("Content-Type", "application/json");
+          res.writeHead(400).end(
+            JSON.stringify({ error: { message: "Invalid JSON body" } }),
+          );
+          return;
+        }
+
+        // Validate minimal required fields
+        const { mermaid, theme = "default", backgroundColor = "white", outputType = "png" } =
+          (body as Record<string, unknown>) || {};
+        if (typeof mermaid !== "string" || !mermaid.trim()) {
+          res.setHeader("Content-Type", "application/json");
+          res.writeHead(400).end(
+            JSON.stringify({ error: { message: "'mermaid' is required" } }),
+          );
+          return;
+        }
+
+        // Render
+        const { svg, screenshot } = await renderMermaid(
+          mermaid as string,
+          theme as string,
+          backgroundColor as string,
+        );
+
+        if (outputType === "mermaid") {
+          res.setHeader("Content-Type", "application/json");
+          res.writeHead(200).end(
+            JSON.stringify({ mermaid, mimeType: "text/plain" }),
+          );
+          return;
+        }
+
+        if (outputType === "svg") {
+          res.setHeader("Content-Type", "application/json");
+          res.writeHead(200).end(
+            JSON.stringify({ svg, mimeType: "image/svg+xml" }),
+          );
+          return;
+        }
+
+        // png path: store via FileStorageService
+        if (!screenshot) {
+          res.setHeader("Content-Type", "application/json");
+          res.writeHead(500).end(
+            JSON.stringify({ error: { message: "Failed to generate screenshot" } }),
+          );
+          return;
+        }
+
+        const fileStorage = new FileStorageService(token);
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const filename = `mermaid-${String(theme)}-${timestamp}.png`;
+
+        const fileResult = await fileStorage.storeFile(
+          screenshot,
+          filename,
+          "image/png",
+        );
+
+        res.setHeader("Content-Type", "application/json");
+        res.writeHead(200).end(
+          JSON.stringify({ url: fileResult.url, fileId: fileResult.fileId, mimeType: "image/png" }),
+        );
+        return;
+      } catch (error) {
+        Logger.error("Error handling /render request", error);
+        res.setHeader("Content-Type", "application/json");
+        res.writeHead(500).end(
+          JSON.stringify({ error: { message: "Internal Server Error" } }),
+        );
+        return;
+      }
+    }
+
+    // Handle POST requests to endpoint (MCP streamable)
     if (req.method === "POST" && reqUrl.pathname === endpoint) {
       try {
         const sessionId = Array.isArray(req.headers["mcp-session-id"])
